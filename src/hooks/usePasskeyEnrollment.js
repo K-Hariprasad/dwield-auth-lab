@@ -52,7 +52,7 @@ export function usePasskeyEnrollment() {
       } else if (err.code === PasskeyErrorCode.NOT_SUPPORTED) {
         friendlyError = 'WebAuthn passkeys are not supported by this browser environment.';
       } else if (err.code === PasskeyErrorCode.UNAUTHORIZED) {
-        friendlyError = 'SDK API Key authorization failed.';
+        friendlyError = err.message || 'SDK API Key authorization failed.';
       }
 
       setError(friendlyError);
