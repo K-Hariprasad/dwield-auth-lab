@@ -9,7 +9,7 @@ import { evaluateRiskScore } from '../services/dwieldSdk.js';
 export function RiskAssessmentPage() {
   const { initialized } = useSdk();
   const [email, setEmail] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_DWIELD_API_KEY || '');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

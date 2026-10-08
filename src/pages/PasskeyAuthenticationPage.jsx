@@ -10,7 +10,7 @@ export function PasskeyAuthenticationPage() {
   const { initialized, webAuthnSupport, serverHealth } = useSdk();
   const { loading, step, result, error, authenticatePasskey } = usePasskeyAuthentication();
   const [email, setEmail] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_DWIELD_API_KEY || '');
 
   const handleSubmit = async (e) => {
     e.preventDefault();

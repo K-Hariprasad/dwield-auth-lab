@@ -9,7 +9,7 @@ import { runAdaptiveAuthenticationPipeline } from '../services/dwieldSdk.js';
 export function AdaptiveAuthenticationPage() {
   const { initialized } = useSdk();
   const [email, setEmail] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_DWIELD_API_KEY || '');
   
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0); // 0: Idle, 1: Signals & Risk, 2: Decision, 3: Step-Up, 4: Complete
