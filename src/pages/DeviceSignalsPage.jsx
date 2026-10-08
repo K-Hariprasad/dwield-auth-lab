@@ -35,8 +35,8 @@ export function DeviceSignalsPage() {
 
       {/* Control Panel Card */}
       <Card title="Signal Collection Trigger" icon={Cpu}>
-        <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className="form-group" style={{ flex: 1, minWidth: '280px', marginBottom: 0 }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="form-group" style={{ flex: '1 1 240px', minWidth: 'min(240px, 100%)', marginBottom: 0 }}>
             <label className="form-label">Test User Identifier / Email Context</label>
             <input
               type="text"

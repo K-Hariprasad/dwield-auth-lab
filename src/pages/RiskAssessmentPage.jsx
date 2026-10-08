@@ -193,26 +193,11 @@ export function RiskAssessmentPage() {
       {result && (
         <Card title="Risk Engine Execution Output & Diagnostics" icon={ShieldCheck}>
           {/* Tab Navigation Header */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', marginBottom: '1.25rem', gap: '0.5rem' }}>
+          <div className="tab-navigation-header">
             <button
               type="button"
               onClick={() => setActiveTab('response')}
-              style={{
-                padding: '0.6rem 1.25rem',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                color: activeTab === 'response' ? 'var(--accent-primary)' : 'var(--text-muted)',
-                borderBottom: activeTab === 'response' ? '2.5px solid var(--accent-primary)' : '2.5px solid transparent',
-                background: 'none',
-                borderLeft: 'none',
-                borderRight: 'none',
-                borderTop: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
+              className={`tab-nav-btn ${activeTab === 'response' ? 'active' : ''}`}
             >
               <ShieldCheck size={16} />
               <span>Response</span>
@@ -221,22 +206,7 @@ export function RiskAssessmentPage() {
             <button
               type="button"
               onClick={() => setActiveTab('payload')}
-              style={{
-                padding: '0.6rem 1.25rem',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                color: activeTab === 'payload' ? 'var(--accent-primary)' : 'var(--text-muted)',
-                borderBottom: activeTab === 'payload' ? '2.5px solid var(--accent-primary)' : '2.5px solid transparent',
-                background: 'none',
-                borderLeft: 'none',
-                borderRight: 'none',
-                borderTop: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
+              className={`tab-nav-btn ${activeTab === 'payload' ? 'active' : ''}`}
             >
               <Fingerprint size={16} />
               <span>Payload</span>

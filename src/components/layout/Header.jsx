@@ -26,29 +26,43 @@ export function Header({ onMenuClick }) {
 
   return (
     <header className="header-navbar">
-      <div className="header-title">
+      <div className="header-top-bar">
+        <div className="header-title">
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            onClick={onMenuClick}
+            title="Toggle Navigation Menu"
+            aria-label="Toggle Navigation Menu"
+          >
+            <Menu size={20} />
+          </button>
+          <h2>{getPageTitle(location.pathname)}</h2>
+        </div>
+
         <button
           type="button"
-          className="mobile-menu-toggle"
-          onClick={onMenuClick}
-          title="Toggle Navigation Menu"
+          onClick={refreshHealth}
+          disabled={loading}
+          className="btn btn-secondary header-refresh-btn mobile-header-btn"
+          title="Refresh Backend Diagnostics Health"
         >
-          <Menu size={20} />
+          <RefreshCw size={13} className={loading ? 'spin' : ''} />
+          <span>Refresh</span>
         </button>
-        <h2>{getPageTitle(location.pathname)}</h2>
       </div>
 
       <div className="header-status-group">
         <div className="status-indicator-pill" title="Dwield SDK Initialization Status">
           <Shield size={13} color="#475569" />
           <span className={`status-dot ${initialized ? 'online' : 'offline'}`} />
-          <span>SDK {initialized ? 'Initialized' : 'Not Initialized'}</span>
+          <span>SDK {initialized ? 'Initialized' : 'Offline'}</span>
         </div>
 
         <div className="status-indicator-pill" title="Passkey Server Liveness and Readiness Status">
           <Key size={13} color="#475569" />
           <span className={`status-dot ${serverHealth.live ? (serverHealth.ready ? 'online' : 'warning') : 'offline'}`} />
-          <span>Passkey Server {serverHealth.live ? (serverHealth.ready ? 'Ready' : 'Live (No DB)') : 'Offline'}</span>
+          <span>Passkey {serverHealth.live ? (serverHealth.ready ? 'Ready' : 'Live') : 'Offline'}</span>
         </div>
 
         <div className="status-indicator-pill" title="Active Tenant API Key & Target Environment">
@@ -62,8 +76,7 @@ export function Header({ onMenuClick }) {
           type="button"
           onClick={refreshHealth}
           disabled={loading}
-          className="btn btn-secondary"
-          style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
+          className="btn btn-secondary header-refresh-btn desktop-header-btn"
           title="Refresh Backend Diagnostics Health"
         >
           <RefreshCw size={13} className={loading ? 'spin' : ''} />

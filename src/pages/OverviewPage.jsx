@@ -120,18 +120,18 @@ export function OverviewPage() {
         </Card>
 
         <Card title="Session Operational Statistics" icon={Activity}>
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div style={{ flex: 1, padding: '1rem', backgroundColor: '#F8FAFC', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-main)' }}>{stats.totalOperations}</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>Total Operations</div>
+          <div className="operational-stats-grid">
+            <div className="operational-stat-box stat-box-total">
+              <div className="stat-num">{stats.totalOperations}</div>
+              <div className="stat-lbl">Total Operations</div>
             </div>
-            <div style={{ flex: 1, padding: '1rem', backgroundColor: '#ECFDF5', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#047857' }}>{stats.successCount}</div>
-              <div style={{ fontSize: '0.78rem', color: '#065F46', fontWeight: 500 }}>Successful</div>
+            <div className="operational-stat-box stat-box-success">
+              <div className="stat-num text-success">{stats.successCount}</div>
+              <div className="stat-lbl text-success-lbl">Successful</div>
             </div>
-            <div style={{ flex: 1, padding: '1rem', backgroundColor: '#FEF2F2', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#B91C1C' }}>{stats.failureCount}</div>
-              <div style={{ fontSize: '0.78rem', color: '#991B1B', fontWeight: 500 }}>Failed / Denied</div>
+            <div className="operational-stat-box stat-box-fail">
+              <div className="stat-num text-danger">{stats.failureCount}</div>
+              <div className="stat-lbl text-danger-lbl">Failed / Denied</div>
             </div>
           </div>
 
