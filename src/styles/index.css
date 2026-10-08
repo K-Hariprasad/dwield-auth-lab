@@ -707,6 +707,10 @@ input, select, textarea {
   background-color: #10B981;
 }
 
+.timeline-connector.denied {
+  background-color: #EF4444;
+}
+
 /* Integration Required Banner */
 .integration-required-box {
   background-color: #FFFBEB;

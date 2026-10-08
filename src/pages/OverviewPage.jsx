@@ -63,12 +63,12 @@ export function OverviewPage() {
           <div className="stat-label">Latest Assessment</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.2rem' }}>
             <div className="stat-value" style={{ fontSize: '1.1rem' }}>
-              {latestAssessment ? latestAssessment.decision : 'N/A'}
+              {latestAssessment ? (latestAssessment.suggestion || latestAssessment.decision) : 'N/A'}
             </div>
-            {latestAssessment && <StatusBadge status={latestAssessment.decision} />}
+            {latestAssessment && <StatusBadge status={latestAssessment.suggestion || latestAssessment.decision} />}
           </div>
           <div className="stat-desc">
-            {latestAssessment?.assessmentId ? `ID: ${latestAssessment.assessmentId.substring(0, 12)}...` : 'No assessment run yet'}
+            {latestAssessment?.suggestion && latestAssessment?.decision ? `Decision: ${latestAssessment.decision}` : (latestAssessment?.assessmentId ? `ID: ${latestAssessment.assessmentId.substring(0, 12)}...` : 'No assessment run yet')}
           </div>
         </div>
 
@@ -76,14 +76,14 @@ export function OverviewPage() {
           <div className="stat-label">Passkey Verification</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.2rem' }}>
             <div className="stat-value" style={{ fontSize: '1.1rem' }}>
-              {latestPasskeyResult ? (latestPasskeyResult.verified ? 'Verified' : latestPasskeyResult.bypassPasskey ? 'Bypassed' : 'Failed') : 'N/A'}
+              {latestPasskeyResult ? (latestPasskeyResult.bypassPasskey ? 'Bypassed' : latestPasskeyResult.verified ? 'Verified' : 'Failed') : 'N/A'}
             </div>
             {latestPasskeyResult && (
-              <StatusBadge status={latestPasskeyResult.verified ? 'VERIFIED' : latestPasskeyResult.decision} />
+              <StatusBadge status={latestPasskeyResult.bypassPasskey ? 'ALLOW' : latestPasskeyResult.verified ? 'VERIFIED' : latestPasskeyResult.decision} />
             )}
           </div>
           <div className="stat-desc">
-            {latestPasskeyResult?.credentialId ? `Cred: ${latestPasskeyResult.credentialId.substring(0, 10)}...` : 'No verification run'}
+            {latestPasskeyResult?.bypassPasskey ? `Bypassed (${latestPasskeyResult.suggestion || 'Low Risk'})` : latestPasskeyResult?.credentialId ? `Cred: ${latestPasskeyResult.credentialId.substring(0, 10)}...` : 'No verification run'}
           </div>
         </div>
       </div>

@@ -100,35 +100,84 @@ export function RiskAssessmentPage() {
             </div>
           ) : result ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', backgroundColor: '#F8FAFC', borderRadius: '8px' }}>
+              {/* Primary Suggestion & Decision Display */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                 <div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Risk Decision Policy
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Risk Engine Suggestion
                   </div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                    {result.decision}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem' }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                      {result.suggestion || result.decision}
+                    </span>
+                    <StatusBadge status={result.suggestion || result.decision} />
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    Policy Decision: <strong style={{ color: 'var(--text-main)' }}>{result.decision}</strong>
                   </div>
                 </div>
-                <StatusBadge status={result.decision} />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              {/* Suggestion Action Guidance Box */}
+              {result.decision === 'ALLOW' ? (
+                <div style={{ padding: '0.85rem 1rem', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px', color: '#065F46', fontSize: '0.85rem' }}>
+                  <strong>Passkey Verification Not Required:</strong> Low risk detected ({result.suggestion}). User may proceed without passkey step-up.
+                </div>
+              ) : result.decision === 'STEP_UP' ? (
+                <div style={{ padding: '0.85rem 1rem', backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '8px', color: '#92400E', fontSize: '0.85rem' }}>
+                  <strong>Automatic Passkey Authentication:</strong> High risk detected ({result.suggestion}). Automatic passkey verification is required.
+                </div>
+              ) : (
+                <div style={{ padding: '0.85rem 1rem', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', color: '#991B1B', fontSize: '0.85rem' }}>
+                  <strong>Authentication Prohibited:</strong> Risk Engine suggested {result.suggestion}. Authentication terminated & access denied.
+                </div>
+              )}
+
+              {/* Assessment Metrics & Identifiers Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                 <div style={{ padding: '0.75rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Assessment ID</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: 600, marginTop: '0.2rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Risk Score</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.2rem', color: 'var(--accent-primary)' }}>
+                    {result.riskScore !== undefined ? result.riskScore : (result.score !== undefined ? result.score : 'N/A')}
+                  </div>
+                </div>
+
+                {result.location && (
+                  <div style={{ padding: '0.75rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Location</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 600, marginTop: '0.2rem' }}>
+                      {result.location}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ padding: '0.75rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Assessment ID</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600, marginTop: '0.2rem', wordBreak: 'break-all' }}>
                     {result.assessmentId}
                   </div>
                 </div>
 
-                <div style={{ padding: '0.75rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Risk Score</div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 600, marginTop: '0.2rem' }}>
-                    {result.riskScore !== undefined ? result.riskScore : (result.score !== undefined ? result.score : 'Evaluated')}
+                {result.deviceId && (
+                  <div style={{ padding: '0.75rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Device ID</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', wordBreak: 'break-all' }}>
+                      {result.deviceId}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {result.machineId && (
+                  <div style={{ padding: '0.75rem', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Machine ID</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', wordBreak: 'break-all' }}>
+                      {result.machineId}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Evaluated via Risk Engine endpoint (<code>https://testweb.dwield.ai:8762/risk-score</code>)
               </div>
             </div>

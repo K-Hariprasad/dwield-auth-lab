@@ -178,6 +178,75 @@ export async function collectDeviceSignals() {
 }
 
 /**
+ * Normalizes and evaluates the risk engine suggestion field (case-insensitive).
+ * Possible values:
+ * 1. Good        -> ALLOW (No passkey verification needed)
+ * 2. Accept      -> ALLOW (No passkey verification needed)
+ * 3. Low Risky   -> ALLOW (No passkey verification needed)
+ * 4. High        -> STEP_UP (Automatic passkey authentication required)
+ * 5. Reject      -> DENY (Terminate flow, do not allow authentication)
+ */
+export function parseRiskSuggestion(rawSuggestion) {
+  if (!rawSuggestion || typeof rawSuggestion !== 'string') return null;
+
+  // Case-insensitive normalization, collapsing multiple spaces/hyphens
+  const clean = rawSuggestion.trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+
+  // 1. Good, 2. Accept, 3. Low Risky
+  if (clean === 'good' || clean === 'accept' || clean === 'low risky' || clean === 'lowrisky') {
+    return {
+      raw: rawSuggestion,
+      normalized: clean,
+      decision: 'ALLOW',
+      action: 'ALLOW',
+      requiresPasskey: false,
+      isRejected: false,
+      label: rawSuggestion.trim(),
+      description: 'Low risk detected. Passkey verification is bypassed.'
+    };
+  }
+
+  // 4. High
+  if (clean === 'high') {
+    return {
+      raw: rawSuggestion,
+      normalized: clean,
+      decision: 'STEP_UP',
+      action: 'STEP_UP',
+      requiresPasskey: true,
+      isRejected: false,
+      label: rawSuggestion.trim(),
+      description: 'High risk detected. Automatic passkey authentication required.'
+    };
+  }
+
+  // 5. Reject
+  if (clean === 'reject') {
+    return {
+      raw: rawSuggestion,
+      normalized: clean,
+      decision: 'DENY',
+      action: 'REJECT',
+      requiresPasskey: false,
+      isRejected: true,
+      label: rawSuggestion.trim(),
+      description: 'Authentication rejected by Risk Engine. Access prohibited.'
+    };
+  }
+
+  return {
+    raw: rawSuggestion,
+    normalized: clean,
+    decision: 'STEP_UP',
+    action: 'STEP_UP',
+    requiresPasskey: true,
+    isRejected: false,
+    label: rawSuggestion.trim(),
+    description: `Risk suggestion "${rawSuggestion}". Passkey verification required.`
+  };
+}
+
+/**
  * Executes Risk Score evaluation via the SDK.
  */
 export async function evaluateRiskScore(userInfo, customApiKey = null) {
@@ -219,14 +288,40 @@ export async function evaluateRiskScore(userInfo, customApiKey = null) {
 
     const duration = Math.round(performance.now() - startTime);
 
-    const decision = result?.decision || result?.riskDecision || 'ALLOW';
+    // Extract suggestion from result (case-insensitive evaluation)
+    const rawSuggestion = result?.suggestion || result?.data?.suggestion || null;
+    const suggestionInfo = parseRiskSuggestion(rawSuggestion);
+
+    let decision;
+    if (suggestionInfo) {
+      decision = suggestionInfo.decision;
+    } else {
+      // Legacy fallback
+      const legacyDecision = result?.decision || result?.riskDecision || result?.modelResponse?.result?.recommended_action;
+      if (legacyDecision) {
+        const d = String(legacyDecision).toUpperCase();
+        decision = (d === 'DENY' || d === 'REJECT') ? 'DENY' : (d === 'STEP_UP' || d === 'CHALLENGE') ? 'STEP_UP' : 'ALLOW';
+      } else {
+        decision = 'ALLOW';
+      }
+    }
+
+    const effectiveSuggestion = rawSuggestion || (decision === 'ALLOW' ? 'Accept' : decision === 'DENY' ? 'Reject' : 'High');
+    const effectiveSuggestionInfo = suggestionInfo || parseRiskSuggestion(effectiveSuggestion);
     const assessmentId = result?.assessmentId || result?.id || result?.assessment_id || `asm_${Date.now()}`;
 
     const enrichedResult = {
       ...result,
+      suggestion: effectiveSuggestion,
+      suggestionInfo: effectiveSuggestionInfo,
       decision,
       assessmentId,
-      deviceSignals
+      deviceSignals,
+      riskScore: result?.riskScore ?? result?.data?.riskScore ?? result?.score,
+      location: result?.location || result?.data?.location,
+      machineId: result?.machineId || result?.data?.machineId,
+      deviceId: result?.deviceId || result?.data?.deviceId,
+      modelResponse: result?.modelResponse || result?.data?.modelResponse
     };
 
     setLatestAssessment(enrichedResult);
@@ -346,6 +441,11 @@ export async function authenticatePasskey(options = {}) {
 
 /**
  * Runs Adaptive Authentication pipeline connecting Risk Engine output to Passkey Step-Up.
+ * 
+ * Rules based on Risk Engine suggestion (case-insensitive):
+ * 1-3. "Good", "Accept", "Low Risky": Passkey verification bypassed. Access allowed directly.
+ * 4.   "High": Passkey authentication automatically triggered and verified.
+ * 5.   "Reject": Authentication strictly prohibited. Flow terminated with error message.
  */
 export async function runAdaptiveAuthenticationPipeline(userInfo, passkeyOptions = {}) {
   const startTime = performance.now();
@@ -379,6 +479,7 @@ export async function runAdaptiveAuthenticationPipeline(userInfo, passkeyOptions
       riskAssessment = {
         assessmentId: `asm_${Date.now()}`,
         decision: 'STEP_UP',
+        suggestion: 'High',
         riskScore: 0.5,
         deviceSignals,
         error: e.message
@@ -386,9 +487,71 @@ export async function runAdaptiveAuthenticationPipeline(userInfo, passkeyOptions
     }
 
     const assessmentId = riskAssessment.assessmentId;
-    const decision = 'STEP_UP'; // Everything is forced to STEP_UP for now per requirement
+    const suggestion = riskAssessment.suggestion || '';
+    const suggestionInfo = riskAssessment.suggestionInfo || parseRiskSuggestion(suggestion) || {
+      decision: riskAssessment.decision || 'STEP_UP',
+      requiresPasskey: true,
+      isRejected: false
+    };
+    const decision = suggestionInfo.decision;
 
-    // 2. Initiate passkey step-up authentication using email & API key header and verify passkey
+    // RULE 5: Reject -> Terminate flow, do not allow authentication
+    if (decision === 'DENY' || suggestionInfo.isRejected) {
+      const duration = Math.round(performance.now() - startTime);
+      const denyError = new Error(
+        `Authentication rejected: Risk Engine suggestion is "${suggestion || 'Reject'}". Access is strictly prohibited.`
+      );
+      denyError.code = 'RISK_DENIED';
+      denyError.suggestion = suggestion || 'Reject';
+      denyError.decision = 'DENY';
+      denyError.assessmentId = assessmentId;
+      denyError.riskAssessment = riskAssessment;
+
+      logActivity('ADAPTIVE_AUTHENTICATION_PIPELINE', 'DENIED', {
+        email: emailStr,
+        suggestion: suggestion || 'Reject',
+        riskDecision: 'DENY',
+        assessmentId,
+        reason: 'Terminated: Risk Engine evaluated Reject policy'
+      }, assessmentId, duration);
+
+      throw denyError;
+    }
+
+    // RULES 1-3: Good / Accept / Low Risky -> Bypass passkey verification
+    if (decision === 'ALLOW' || !suggestionInfo.requiresPasskey) {
+      const duration = Math.round(performance.now() - startTime);
+      const bypassPasskeyResult = {
+        success: true,
+        verified: true,
+        bypassPasskey: true,
+        decision: 'ALLOW',
+        suggestion: suggestion || 'Accept',
+        reason: `Passkey verification bypassed because risk suggestion is "${suggestion || 'Accept'}".`
+      };
+
+      setLatestPasskeyResult(bypassPasskeyResult);
+
+      logActivity('ADAPTIVE_AUTHENTICATION_PIPELINE', 'SUCCESS', {
+        email: emailStr,
+        suggestion: suggestion || 'Accept',
+        riskDecision: 'ALLOW',
+        bypassPasskey: true,
+        assessmentId
+      }, assessmentId, duration);
+
+      return {
+        deviceSignals: deviceSignals || riskAssessment?.deviceSignals,
+        riskAssessment,
+        passkeyResult: bypassPasskeyResult,
+        decision: 'ALLOW',
+        suggestion: suggestion || 'Accept',
+        bypassPasskey: true,
+        message: `Passkey verification bypassed (Suggestion: ${suggestion || 'Accept'}). Authentication allowed directly.`
+      };
+    }
+
+    // RULE 4: High -> Automatically give passkey authentication
     const passkeyResult = await authenticatePasskey({
       ...passkeyOptions,
       apiKey: customApiKey,
@@ -404,28 +567,26 @@ export async function runAdaptiveAuthenticationPipeline(userInfo, passkeyOptions
     logActivity('ADAPTIVE_AUTHENTICATION_PIPELINE', finalStatus, {
       email: emailStr,
       apiKey: customApiKey ? 'Custom Key Provided' : 'Default Key',
-      riskDecision: decision,
-      originalRiskDecision: riskAssessment?.rawRiskDecision || riskAssessment?.decision,
+      suggestion: suggestion || 'High',
+      riskDecision: 'STEP_UP',
       assessmentId,
       passkeyResult
     }, assessmentId, duration);
 
     return {
       deviceSignals: deviceSignals || riskAssessment?.deviceSignals,
-      riskAssessment: {
-        ...riskAssessment,
-        decision,
-        rawRiskDecision: riskAssessment?.decision
-      },
+      riskAssessment,
       passkeyResult,
-      decision,
+      decision: 'STEP_UP',
+      suggestion: suggestion || 'High',
       stepUpVerificationToken: passkeyResult?.stepUpVerificationToken
     };
   } catch (err) {
     const duration = Math.round(performance.now() - startTime);
     logActivity('ADAPTIVE_AUTHENTICATION_PIPELINE', 'FAILED', {
       error: err.message,
-      code: err.code
+      code: err.code,
+      suggestion: err.suggestion
     }, null, duration);
     throw err;
   }

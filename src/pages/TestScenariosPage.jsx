@@ -53,7 +53,7 @@ export function TestScenariosPage() {
         updateScenario(id, 'PASSED', `Collected ${Object.keys(data.device || {}).length} device signal groups.`);
       } else if (id === 3) {
         const risk = await evaluateRiskScore({ userId: 'test-scenario-user' });
-        updateScenario(id, 'PASSED', `Evaluated risk score. Decision: ${risk.decision}`);
+        updateScenario(id, 'PASSED', `Evaluated risk score. Suggestion: ${risk.suggestion || 'N/A'}, Decision: ${risk.decision}`);
       } else if (id === 4) {
         const health = await checkPasskeyServerHealth();
         updateScenario(id, health.reachable ? 'PASSED' : 'FAILED', health.reachable ? 'Passkey Server live & ready.' : 'Passkey Server unreachable.');

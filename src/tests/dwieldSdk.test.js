@@ -17,4 +17,42 @@ describe('Dwield SDK Integration Adapter', () => {
     expect(health.ready).toBe(false);
     expect(health.error).toBe('Network offline');
   });
+
+  describe('parseRiskSuggestion', () => {
+    it('handles Good, Accept, Low Risky case-insensitively (bypasses passkey)', async () => {
+      const { parseRiskSuggestion } = await import('../services/dwieldSdk.js');
+
+      ['Good', 'good', 'GOOD', 'Accept', 'ACCEPT', 'accept', 'Low Risky', 'low risky', 'LOW RISKY'].forEach(val => {
+        const parsed = parseRiskSuggestion(val);
+        expect(parsed).not.toBeNull();
+        expect(parsed.decision).toBe('ALLOW');
+        expect(parsed.requiresPasskey).toBe(false);
+        expect(parsed.isRejected).toBe(false);
+      });
+    });
+
+    it('handles High case-insensitively (requires passkey)', async () => {
+      const { parseRiskSuggestion } = await import('../services/dwieldSdk.js');
+
+      ['High', 'high', 'HIGH'].forEach(val => {
+        const parsed = parseRiskSuggestion(val);
+        expect(parsed).not.toBeNull();
+        expect(parsed.decision).toBe('STEP_UP');
+        expect(parsed.requiresPasskey).toBe(true);
+        expect(parsed.isRejected).toBe(false);
+      });
+    });
+
+    it('handles Reject case-insensitively (strictly terminates/denies)', async () => {
+      const { parseRiskSuggestion } = await import('../services/dwieldSdk.js');
+
+      ['Reject', 'reject', 'REJECT'].forEach(val => {
+        const parsed = parseRiskSuggestion(val);
+        expect(parsed).not.toBeNull();
+        expect(parsed.decision).toBe('DENY');
+        expect(parsed.requiresPasskey).toBe(false);
+        expect(parsed.isRejected).toBe(true);
+      });
+    });
+  });
 });

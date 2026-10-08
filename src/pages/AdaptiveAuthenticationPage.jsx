@@ -36,7 +36,19 @@ export function AdaptiveAuthenticationPage() {
       setActiveTab('response'); // Open Response tab by default
     } catch (err) {
       setError(err);
-      setCurrentStep(err.code === 'RISK_DENIED' ? 2 : 3);
+      if (err.riskAssessment || err.code === 'RISK_DENIED') {
+        setCurrentStep(3); // Halt at Step 3 (Policy Decision / Rejected)
+        setPipelineResult({
+          riskAssessment: err.riskAssessment,
+          decision: 'DENY',
+          suggestion: err.suggestion || err.riskAssessment?.suggestion || 'Reject',
+          deviceSignals: err.riskAssessment?.deviceSignals || deviceSignals,
+          error: err.message
+        });
+        setActiveTab('response');
+      } else {
+        setCurrentStep(2);
+      }
     } finally {
       setLoading(false);
     }
@@ -48,7 +60,7 @@ export function AdaptiveAuthenticationPage() {
     <div>
       <div className="page-header">
         <h1>Adaptive Authentication Test Workflow</h1>
-        <p>Risk-based authentication flow requiring email ID & SDK API Key. Evaluates risk score first, triggering Passkey Step-Up authentication if decision is STEP_UP.</p>
+        <p>Risk-based authentication flow evaluating Risk Engine suggestion: Good, Accept, and Low Risky bypass passkey; High automatically requires passkey; Reject terminates the flow.</p>
       </div>
 
       {/* Visual Timeline Component */}
@@ -63,24 +75,36 @@ export function AdaptiveAuthenticationPage() {
             <div className="step-circle">1</div>
             <div className="step-label">Collect Signals</div>
           </div>
-          <div className={`timeline-connector ${currentStep >= 2 ? 'completed' : ''}`} />
+          <div className={`timeline-connector ${currentStep >= 2 ? (pipelineResult?.decision === 'DENY' ? 'denied' : 'completed') : ''}`} />
 
           <div className={`timeline-step ${currentStep >= 2 ? (pipelineResult?.decision === 'DENY' ? 'denied' : 'completed') : ''}`}>
             <div className="step-circle">2</div>
             <div className="step-label">Risk Assessment</div>
           </div>
-          <div className={`timeline-connector ${currentStep >= 3 ? 'completed' : ''}`} />
+          <div className={`timeline-connector ${currentStep >= 3 ? (pipelineResult?.decision === 'DENY' ? 'denied' : 'completed') : ''}`} />
 
           <div className={`timeline-step ${currentStep >= 3 ? (pipelineResult?.decision === 'DENY' ? 'denied' : 'completed') : ''}`}>
             <div className="step-circle">3</div>
-            <div className="step-label">Policy Decision</div>
+            <div className="step-label">
+              {pipelineResult?.suggestion ? `Suggestion: ${pipelineResult.suggestion}` : 'Policy Decision'}
+            </div>
           </div>
-          <div className={`timeline-connector ${currentStep >= 4 ? 'completed' : ''}`} />
+          <div className={`timeline-connector ${currentStep >= 4 ? 'completed' : (pipelineResult?.decision === 'DENY' ? 'denied' : '')}`} />
 
-          <div className={`timeline-step ${currentStep >= 4 ? (pipelineResult?.decision === 'ALLOW' ? 'completed' : pipelineResult?.passkeyResult?.verified ? 'completed' : 'active') : ''}`}>
+          <div className={`timeline-step ${
+            pipelineResult?.decision === 'DENY'
+              ? 'denied'
+              : currentStep >= 4
+              ? (pipelineResult?.decision === 'ALLOW' ? 'completed' : pipelineResult?.passkeyResult?.verified ? 'completed' : 'active')
+              : ''
+          }`}>
             <div className="step-circle">4</div>
             <div className="step-label">
-              {pipelineResult?.decision === 'ALLOW' ? 'Bypassed (ALLOW)' : pipelineResult?.decision === 'DENY' ? 'Prohibited (DENY)' : 'Passkey Step-Up'}
+              {pipelineResult?.decision === 'ALLOW'
+                ? 'Bypassed (ALLOW)'
+                : pipelineResult?.decision === 'DENY'
+                ? 'Terminated (DENY)'
+                : 'Passkey Step-Up'}
             </div>
           </div>
         </div>
@@ -120,13 +144,13 @@ export function AdaptiveAuthenticationPage() {
           style={{ width: '100%', marginTop: '1.25rem', height: '44px', fontSize: '0.95rem' }}
         >
           <Zap size={18} />
-          <span>{loading ? 'Evaluating Risk Score & Step-Up...' : 'Run Adaptive Authentication Test'}</span>
+          <span>{loading ? 'Evaluating Risk Score & Executing Pipeline...' : 'Run Adaptive Authentication Test'}</span>
         </button>
       </Card>
 
       {/* Error Output Card */}
       {error && (
-        <Card title="Pipeline Exception Handling" icon={ShieldAlert}>
+        <Card title="Pipeline Execution Exception" icon={ShieldAlert}>
           <div style={{ padding: '1rem', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px' }}>
             <div style={{ color: '#991B1B', fontWeight: 600 }}>Adaptive Pipeline Error ({error.code || 'PIPELINE_ERROR'})</div>
             <div style={{ color: '#7F1D1D', fontSize: '0.85rem', marginTop: '0.3rem' }}>{error.message}</div>
@@ -191,37 +215,43 @@ export function AdaptiveAuthenticationPage() {
           {/* TAB 1: RESPONSE (Open by default) */}
           {activeTab === 'response' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Risk Decision Badge Header */}
+              {/* Risk Suggestion & Decision Badge Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                 <div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                    Risk Engine Evaluation Decision
+                    Risk Engine Suggestion & Decision
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                    {pipelineResult.decision}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginTop: '0.35rem' }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                      {pipelineResult.suggestion || pipelineResult.decision}
+                    </span>
+                    <StatusBadge status={pipelineResult.suggestion || pipelineResult.decision} />
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                    Assessment ID: <code style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{pipelineResult.riskAssessment?.assessmentId}</code>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                    Policy Decision: <strong style={{ color: 'var(--text-main)' }}>{pipelineResult.decision}</strong> | Assessment ID: <code style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{pipelineResult.riskAssessment?.assessmentId}</code>
                   </div>
                 </div>
-                <StatusBadge status={pipelineResult.decision} />
               </div>
 
               {/* Branch Specific Info */}
               {pipelineResult.decision === 'ALLOW' && (
                 <div style={{ padding: '1rem', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px' }}>
-                  <div style={{ color: '#065F46', fontWeight: 600, fontSize: '0.95rem' }}>ALLOW Policy Branch Executed</div>
+                  <div style={{ color: '#065F46', fontWeight: 600, fontSize: '0.95rem' }}>
+                    ALLOW — Passkey Verification Bypassed
+                  </div>
                   <div style={{ color: '#047857', fontSize: '0.85rem', marginTop: '0.3rem', lineHeight: 1.5 }}>
-                    Access granted by Risk Engine. Passkey step-up was bypassed.
+                    Risk Engine suggested <strong>{pipelineResult.suggestion}</strong>. No passkey verification is required. Authentication succeeded directly.
                   </div>
                 </div>
               )}
 
               {pipelineResult.decision === 'STEP_UP' && (
                 <div style={{ padding: '1rem', backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '8px' }}>
-                  <div style={{ color: '#92400E', fontWeight: 600, fontSize: '0.95rem' }}>STEP_UP Adaptive Passkey Challenge Required & Verified</div>
+                  <div style={{ color: '#92400E', fontWeight: 600, fontSize: '0.95rem' }}>
+                    STEP_UP — Automatic Passkey Authentication Verified
+                  </div>
                   <div style={{ color: '#78350F', fontSize: '0.85rem', marginTop: '0.3rem' }}>
-                    Passkey authentication executed and verified bound to Assessment ID <strong>{pipelineResult.riskAssessment?.assessmentId}</strong>.
+                    Risk Engine suggested <strong>{pipelineResult.suggestion}</strong>. Passkey step-up authentication was automatically triggered and verified for Assessment ID <strong>{pipelineResult.riskAssessment?.assessmentId}</strong>.
                   </div>
                   {pipelineResult.stepUpVerificationToken && (
                     <div style={{ marginTop: '0.75rem', padding: '0.66rem', backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #FCD34D' }}>
@@ -236,9 +266,11 @@ export function AdaptiveAuthenticationPage() {
 
               {pipelineResult.decision === 'DENY' && (
                 <div style={{ padding: '1rem', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px' }}>
-                  <div style={{ color: '#991B1B', fontWeight: 600, fontSize: '0.95rem' }}>DENY Policy Strict Enforcement</div>
-                  <div style={{ color: '#7F1D1D', fontSize: '0.85rem', marginTop: '0.3rem' }}>
-                    Risk Engine strictly denied the authentication attempt.
+                  <div style={{ color: '#991B1B', fontWeight: 600, fontSize: '0.95rem' }}>
+                    REJECT — Flow Terminated (Access Prohibited)
+                  </div>
+                  <div style={{ color: '#7F1D1D', fontSize: '0.85rem', marginTop: '0.3rem', lineHeight: 1.5 }}>
+                    Risk Engine suggested <strong>{pipelineResult.suggestion || 'Reject'}</strong>. Authentication was immediately terminated without passkey verification.
                   </div>
                 </div>
               )}

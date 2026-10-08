@@ -7,11 +7,11 @@ export function StatusBadge({ status, label, size = 'normal' }) {
   let badgeClass = 'badge-neutral';
   let displayLabel = label || upperStatus;
 
-  if (['ALLOW', 'SUCCESS', 'VERIFIED', 'ACTIVE', 'LIVE', 'READY', 'ONLINE'].includes(upperStatus)) {
+  if (['ALLOW', 'SUCCESS', 'VERIFIED', 'ACTIVE', 'LIVE', 'READY', 'ONLINE', 'GOOD', 'ACCEPT', 'LOW RISKY', 'LOWRISKY', 'LOW_RISKY'].includes(upperStatus)) {
     badgeClass = 'badge-allow';
-  } else if (['STEP_UP', 'WARNING', 'PENDING', 'CONSUMED', 'CHALLENGE'].includes(upperStatus)) {
+  } else if (['STEP_UP', 'WARNING', 'PENDING', 'CONSUMED', 'CHALLENGE', 'HIGH'].includes(upperStatus)) {
     badgeClass = 'badge-stepup';
-  } else if (['DENY', 'FAILED', 'ERROR', 'DENIED', 'OFFLINE'].includes(upperStatus)) {
+  } else if (['DENY', 'FAILED', 'ERROR', 'DENIED', 'OFFLINE', 'REJECT', 'REJECTED'].includes(upperStatus)) {
     badgeClass = 'badge-deny';
   }
 
