@@ -240,16 +240,6 @@ export async function evaluateRiskScore(userInfo, customApiKey = null) {
   }
 }
 
-export function formatUserToken(rawToken) {
-  if (!rawToken || typeof rawToken !== 'string') return '';
-  const trimmed = rawToken.trim();
-  if (!trimmed) return '';
-  if (trimmed.startsWith('dev:') || trimmed.startsWith('dev_user_') || trimmed.split('.').length === 3) {
-    return trimmed;
-  }
-  return `dev:${trimmed}`;
-}
-
 /**
  * Enrolls a new Passkey for a user identity.
  */
@@ -261,17 +251,11 @@ export async function enrollPasskey(options = {}) {
   const customApiKey = typeof options === 'object' ? options?.apiKey : null;
   const effectiveApiKey = customApiKey || activeCfg?.apiKey || envConfig.apiKey;
 
-  const userEmail = typeof options === 'string' ? options : (options?.email || options?.userName || options?.userId || '');
-  const rawToken = options?.userToken || activeCfg?.userToken || userEmail;
-  const formattedToken = formatUserToken(rawToken);
-
-  const registrationOptions = {
+  const email = typeof options === 'string' ? options : (options?.email || options?.userName || options?.userId || '');
+  const passkeyOptions = {
     ...(typeof options === 'object' ? options : {}),
-    email: userEmail,
-    userName: options?.userName || userEmail,
-    displayName: options?.displayName || userEmail,
-    userToken: formattedToken,
-    credentialName: options?.credentialName || `${userEmail} Passkey`
+    userToken: options?.userToken || email,
+    userName: options?.userName || email,
   };
 
   try {
@@ -280,12 +264,12 @@ export async function enrollPasskey(options = {}) {
       const originalApiKey = sdk.apiKey;
       sdk.apiKey = effectiveApiKey;
       try {
-        result = await sdk.registerPasskey(registrationOptions);
+        result = await sdk.registerPasskey(passkeyOptions);
       } finally {
         sdk.apiKey = originalApiKey;
       }
     } else {
-      result = await sdk.registerPasskey(registrationOptions);
+      result = await sdk.registerPasskey(passkeyOptions);
     }
 
     const duration = Math.round(performance.now() - startTime);
@@ -317,14 +301,10 @@ export async function authenticatePasskey(options = {}) {
   const customApiKey = typeof options === 'object' ? options?.apiKey : null;
   const effectiveApiKey = customApiKey || activeCfg?.apiKey || envConfig.apiKey;
 
-  const userEmail = typeof options === 'string' ? options : (options?.email || options?.userName || options?.userId || '');
-  const rawToken = options?.userToken || activeCfg?.userToken || userEmail;
-  const formattedToken = formatUserToken(rawToken);
-
-  const authOptions = {
+  const email = typeof options === 'string' ? options : (options?.email || options?.userName || options?.userId || '');
+  const passkeyOptions = {
     ...(typeof options === 'object' ? options : {}),
-    email: userEmail,
-    userToken: formattedToken
+    userToken: options?.userToken || email,
   };
 
   try {
@@ -333,12 +313,12 @@ export async function authenticatePasskey(options = {}) {
       const originalApiKey = sdk.apiKey;
       sdk.apiKey = effectiveApiKey;
       try {
-        result = await sdk.authenticatePasskey(authOptions);
+        result = await sdk.authenticatePasskey(passkeyOptions);
       } finally {
         sdk.apiKey = originalApiKey;
       }
     } else {
-      result = await sdk.authenticatePasskey(authOptions);
+      result = await sdk.authenticatePasskey(passkeyOptions);
     }
 
     const duration = Math.round(performance.now() - startTime);
@@ -362,6 +342,7 @@ export async function authenticatePasskey(options = {}) {
     throw err;
   }
 }
+
 
 /**
  * Runs Adaptive Authentication pipeline connecting Risk Engine output to Passkey Step-Up.
@@ -456,11 +437,10 @@ export async function runAdaptiveAuthenticationPipeline(userInfo, passkeyOptions
 export async function listPasskeys(userToken) {
   const startTime = performance.now();
   const sdk = getActiveSdk();
-  const rawToken = userToken || activeConfig?.userToken || '';
-  const formattedToken = formatUserToken(rawToken);
+  const effectiveToken = userToken || activeConfig?.userToken || '';
 
   try {
-    const credentials = await sdk.listPasskeys({ userToken: formattedToken });
+    const credentials = await sdk.listPasskeys({ userToken: effectiveToken });
     const duration = Math.round(performance.now() - startTime);
 
     logActivity('LIST_PASSKEYS', 'SUCCESS', { count: credentials.length }, null, duration);
@@ -478,11 +458,10 @@ export async function listPasskeys(userToken) {
 export async function revokePasskey(credentialId, userToken) {
   const startTime = performance.now();
   const sdk = getActiveSdk();
-  const rawToken = userToken || activeConfig?.userToken || '';
-  const formattedToken = formatUserToken(rawToken);
+  const effectiveToken = userToken || activeConfig?.userToken || '';
 
   try {
-    const result = await sdk.revokePasskey(credentialId, { userToken: formattedToken });
+    const result = await sdk.revokePasskey(credentialId, { userToken: effectiveToken });
     const duration = Math.round(performance.now() - startTime);
 
     logActivity('REVOKE_PASSKEY', 'SUCCESS', result, credentialId, duration);
