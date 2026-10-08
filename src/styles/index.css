@@ -228,7 +228,16 @@ input, select, textarea {
   backdrop-filter: blur(2px);
   z-index: 90;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.sidebar-overlay.open {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
 }
 
 /* Main Content Area */
@@ -896,10 +905,12 @@ input, select, textarea {
     transform: translateX(-100%);
     z-index: 100;
     box-shadow: 4px 0 28px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
   }
 
   .sidebar.open {
     transform: translateX(0);
+    pointer-events: auto;
   }
 
   .sidebar-close-btn {
@@ -910,12 +921,16 @@ input, select, textarea {
   }
 
   .sidebar-overlay {
-    display: block;
+    display: none;
+    pointer-events: none;
+    visibility: hidden;
   }
 
   .sidebar-overlay.open {
+    display: block;
     opacity: 1;
     pointer-events: auto;
+    visibility: visible;
   }
 
   /* Main Content Area - Critical Mobile Width Fix */
